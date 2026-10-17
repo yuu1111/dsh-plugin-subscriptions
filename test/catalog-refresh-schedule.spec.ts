@@ -131,7 +131,9 @@ test('registered plugin refreshes at startup and hourly, while menus and disposa
     await saveAccountSession('codex', 'c', { accessToken: 'c', refreshToken: 'c', expiresAt: now + 86_400_000, accountId: 'c' })
     await catalogStore('codex').save({ at: now - 360_000, models: [{ id: 'cached', name: 'Cached', contextWindow: 1000 }] })
     runtime = ctx.plugin(plugin, { providers: ['codex'] })
-    for (let i = 0; i < 500 && requests === 0; i++) await settle()
+    // 0.2.1-rc.2 paths take a few more microtask turns to reach the first
+    // fetch; widen the settle budget so a loaded runner still observes it.
+    for (let i = 0; i < 5000 && requests === 0; i++) await settle()
     assert.equal(requests, 1, 'plugin startup must schedule discovery without opening a menu')
     for (let i = 0; i < 30; i++) await settle()
     t.mock.timers.tick(6 * 60_000)
