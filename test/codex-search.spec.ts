@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { WebRuntime } from '@deepseek-ai/dsh-web'
+import { createVolatile } from '@deepseek-ai/cosmokit'
 import { Context } from '@deepseek-ai/cordis'
 import {
   CODEX_SEARCH_MODEL,
@@ -9,6 +10,8 @@ import {
   normalizeCodexSearchResponse,
 } from '../src/providers/codex-search.js'
 import type { CodexSession } from '../src/auth/store.js'
+
+const webConfig = () => ({ searchProvider: createVolatile<string | undefined>(undefined), fetchProvider: createVolatile<string | undefined>(undefined) })
 
 const session: CodexSession = {
   accessToken: 'secret', refreshToken: 'refresh', expiresAt: Date.now() + 60_000, accountId: 'acct-1',
@@ -55,7 +58,7 @@ test('Codex Web Search sends the standalone contract and normalizes citations', 
 
 test('DSH WebRuntime caps Codex sources for the native web_search tool', async () => {
   const ctx = new Context()
-  const web = new WebRuntime(ctx)
+  const web = new WebRuntime(ctx, webConfig())
   web.registerSearchProvider(provider(async () => new Response(JSON.stringify({ output: 'ok', results: [
     { url: 'https://example.com/1' }, { url: 'https://example.com/2' },
   ] }))))
@@ -114,7 +117,7 @@ test('the Codex web_search switch drives provider availability, not the host too
 
 test('a disabled Codex provider releases the seam instead of holding it', async () => {
   const ctx = new Context()
-  const web = new WebRuntime(ctx)
+  const web = new WebRuntime(ctx, webConfig())
   let enabled = false
   web.registerSearchProvider(new CodexWebSearchProvider({
     tokens: { session: async () => session },
